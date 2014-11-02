@@ -224,7 +224,11 @@ void generate_test_report(UnitTest* tests, const size_t nr, test_summary_t* summ
 
 void do_help()
 {
-    printf(" help: show this\n");
+    extern char*  __progname;
+    printf("usage: %s [--help][--report]\n", __progname);
+    printf("options:\n");
+    printf("    --help  : show this\n");
+    printf("    --report: generate a report.txt to the current dir\n");
     exit(0);
 }
 
