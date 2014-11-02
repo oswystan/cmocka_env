@@ -45,6 +45,7 @@ UnitTest tests[] =
 
 int main(int argc, char *argv[])
 {
+    parse_options(argc, argv);
     return run_tests(tests);
 }
 

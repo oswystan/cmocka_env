@@ -20,10 +20,9 @@
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
-
-#include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -172,6 +171,86 @@ typedef struct CheckMemoryData {
     size_t size;
 } CheckMemoryData;
 
+/*
+ *****************************************************************
+ *  add more functionalites to cmocka
+ *****************************************************************
+ */
+typedef struct _test_summary_t 
+{
+    int total;
+    int success;
+    int fail;
+} test_summary_t;
+typedef struct _cmocka_options_t 
+{
+    int show_report;
+} cmocka_options_t;
+
+cmocka_options_t g_opt;
+
+/*
+ * added for generate the test report
+ */
+void generate_test_report(UnitTest* tests, const size_t nr, test_summary_t* summary)
+{
+    int i = 0;
+    FILE* fp = fopen("report.txt", "w");
+    if(!fp)
+    {
+        return;
+    }
+    fprintf(fp, "================================================\n");
+    fprintf(fp, "* summary\n");
+    fprintf(fp, "    execute : %d\n", summary->total);
+    fprintf(fp, "    passed  : %d\n", summary->success);
+    fprintf(fp, "    failed  : %d\n", summary->fail);
+
+    fprintf(fp, "* details of each tc\n");
+    for(i=0; i<nr; ++i)
+    {
+        if(0 == tests[i].result)
+        {
+            fprintf(fp, "\t[passed]%s\n", tests[i].name);
+        }
+        else if(1 == tests[i].result)
+        {
+            fprintf(fp, "\t[failed]%s\n", tests[i].name);
+        }
+    }
+    fprintf(fp, "================================================\n");
+    fclose(fp);
+}
+
+void do_help()
+{
+    printf(" help: show this\n");
+    exit(0);
+}
+
+/*
+ * added to support some command line options
+ */
+void parse_options(int argc, char* argv[])
+{
+    int i = 1;
+    memset(&g_opt, 0x00, sizeof(g_opt));
+    for(i=1; i<argc; i++)
+    {
+        if(strcmp(argv[i], "--help") == 0)
+        {
+            do_help();
+        }
+        if(strcmp(argv[i], "--report") == 0)
+        {
+            g_opt.show_report = 1;
+        }
+    }
+    return;
+}
+
+
+/***************************************************************/
 static ListNode* list_initialize(ListNode * const node);
 static ListNode* list_add(ListNode * const head, ListNode *new_node);
 static ListNode* list_add_value(ListNode * const head, const void *value,
@@ -1717,8 +1796,7 @@ int _run_test(
     return rc;
 }
 
-
-int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
+int _run_tests(UnitTest * const tests, const size_t number_of_tests) {
     /* Whether to execute the next test. */
     int run_next_test = 1;
     /* Whether the previous test failed. */
@@ -1755,7 +1833,7 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     while (current_test < number_of_tests) {
         const ListNode *test_check_point = NULL;
         TestState *current_TestState;
-        const UnitTest * const test = &tests[current_test++];
+        UnitTest* test = &tests[current_test++];
         if (!test->function) {
             continue;
         }
@@ -1795,6 +1873,11 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
                                    test->function_type, test_check_point);
             if (failed) {
                 failed_names[total_failed] = test->name;
+                test->result = 1;
+            }
+            else
+            {
+                test->result = 0;
             }
 
             switch (test->function_type) {
@@ -1828,6 +1911,10 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
             }
         }
     }
+    test_summary_t summary;
+    summary.total   = tests_executed;
+    summary.success = tests_executed - total_failed;
+    summary.fail    = total_failed;
 
     print_message("[==========] %"PRIdS " test(s) run.\n", tests_executed);
     print_error("[  PASSED  ] %"PRIdS " test(s).\n", tests_executed - total_failed);
@@ -1846,6 +1933,12 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
         print_error("[  ERROR   ] Mismatched number of setup %"PRIdS " and "
                     "teardown %"PRIdS " functions\n", setups, teardowns);
         total_failed = (size_t)-1;
+    }
+
+    /* added to generate a report */
+    if(g_opt.show_report)
+    {
+        generate_test_report(tests, number_of_tests, &summary);
     }
 
     free(test_states);

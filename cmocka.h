@@ -1297,10 +1297,10 @@ int run_test(#function);
 #endif
 
 /** Initializes a UnitTest structure. */
-#define unit_test(f) { #f, f, UNIT_TEST_FUNCTION_TYPE_TEST }
+#define unit_test(f) { #f, f, UNIT_TEST_FUNCTION_TYPE_TEST, -1 }
 
 #define _unit_test_setup(test, setup) \
-    { #test "_" #setup, setup, UNIT_TEST_FUNCTION_TYPE_SETUP }
+    { #test "_" #setup, setup, UNIT_TEST_FUNCTION_TYPE_SETUP, -1 }
 
 /** Initializes a UnitTest structure with a setup function. */
 #define unit_test_setup(test, setup) \
@@ -1308,7 +1308,7 @@ int run_test(#function);
     unit_test(test)
 
 #define _unit_test_teardown(test, teardown) \
-    { #test "_" #teardown, teardown, UNIT_TEST_FUNCTION_TYPE_TEARDOWN }
+    { #test "_" #teardown, teardown, UNIT_TEST_FUNCTION_TYPE_TEARDOWN, -1 }
 
 /** Initializes a UnitTest structure with a teardown function. */
 #define unit_test_teardown(test, teardown) \
@@ -1370,7 +1370,7 @@ int run_test(#function);
  * @see unit_test_teardown
  * @see unit_test_setup_teardown
  */
-int run_tests(const UnitTest tests[]);
+int run_tests(UnitTest tests[]);
 #else
 #define run_tests(tests) _run_tests(tests, sizeof(tests) / sizeof(tests)[0])
 #endif
@@ -1590,6 +1590,7 @@ typedef struct UnitTest {
     const char* name;
     UnitTestFunction function;
     UnitTestFunctionType function_type;
+    int result;
 } UnitTest;
 
 
@@ -1723,7 +1724,9 @@ int _run_test(
     const char * const function_name, const UnitTestFunction Function,
     void ** const volatile state, const UnitTestFunctionType function_type,
     const void* const heap_check_point);
-int _run_tests(const UnitTest * const tests, const size_t number_of_tests);
+int _run_tests(UnitTest * const tests, const size_t number_of_tests);
+
+void parse_options(int argc, char* argv[]);
 
 /* Standard output and error print methods. */
 void print_message(const char* const format, ...) PRINTF_ATTRIBUTE(1, 2);
